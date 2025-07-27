@@ -1,5 +1,5 @@
 #!/bin/bash
-sh_v="4.0.2"
+sh_v="4.0.3"
 
 
 gl_hui='\e[37m'
@@ -140,7 +140,28 @@ CheckFirstRun_false
 
 ip_address() {
 
-ipv4_address=$(curl -s https://ipinfo.io/ip && echo)
+get_public_ip() {
+	curl -s https://ipinfo.io/ip && echo
+}
+
+get_local_ip() {
+	ip route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[^ ]+' || \
+	hostname -I 2>/dev/null | awk '{print $1}' || \
+	ifconfig 2>/dev/null | grep -E 'inet [0-9]' | grep -v '127.0.0.1' | awk '{print $2}' | head -n1
+}
+
+public_ip=$(get_public_ip)
+isp_info=$(curl -s --max-time 3 http://ipinfo.io/org)
+
+
+if echo "$isp_info" | grep -Eiq 'china|mobile|unicom|telecom'; then
+  ipv4_address=$(get_local_ip)
+else
+  ipv4_address="$public_ip"
+fi
+
+
+# ipv4_address=$(curl -s https://ipinfo.io/ip && echo)
 ipv6_address=$(curl -s --max-time 1 https://v6.ipinfo.io/ip && echo)
 
 }
@@ -495,6 +516,8 @@ while true; do
 	echo "11。指定されたコンテナを入力します12。コンテナログを表示します"
 	echo "13.コンテナネットワークを表示14。コンテナ占有を表示します"
 	echo "------------------------"
+	echo "15.コンテナポートアクセスをオンにする16.コンテナポートアクセスをオフにする"
+	echo "------------------------"
 	echo "0。前のメニューに戻ります"
 	echo "------------------------"
 	read -e -p "選択を入力してください：" sub_choice
@@ -585,6 +608,27 @@ while true; do
 			docker stats --no-stream
 			break_end
 			;;
+
+		15)
+			send_stats "コンテナポートアクセスを許可します"
+			read -e -p "コンテナ名を入力してください：" docker_name
+			ip_address
+			clear_container_rules "$docker_name" "$ipv4_address"
+			local docker_port=$(docker port $docker_name | awk -F'[:]' '/->/ {print $NF}' | uniq)
+			check_docker_app_ip
+			break_end
+			;;
+
+		16)
+			send_stats "コンテナポートアクセスをブロックします"
+			read -e -p "コンテナ名を入力してください：" docker_name
+			ip_address
+			block_container_port "$docker_name" "$ipv4_address"
+			local docker_port=$(docker port $docker_name | awk -F'[:]' '/->/ {print $NF}' | uniq)
+			check_docker_app_ip
+			break_end
+			;;
+
 		*)
 			break  # 跳出循环，退出菜单
 			;;
@@ -1512,7 +1556,7 @@ fi
 
 add_yuming() {
 	  ip_address
-	  echo -e "最初にドメイン名をローカルIPに解決します。${gl_huang}$ipv4_address  $ipv6_address${gl_bai}"
+	  echo -e "最初にドメイン名をネイティブIPに解決します。${gl_huang}$ipv4_address  $ipv6_address${gl_bai}"
 	  read -e -p "IPまたは解決されたドメイン名を入力してください：" yuming
 }
 
@@ -2073,7 +2117,7 @@ web_security() {
 
 				  22)
 					  send_stats "5秒シールドでの高負荷"
-					  echo -e "${gl_huang}ウェブサイトは5分ごとに自動的に検出されます。高負荷の検出に達すると、シールドが自動的にオンになり、低負荷が5秒間自動的にオフになります。${gl_bai}"
+					  echo -e "${gl_huang}ウェブサイトは5分ごとに自動的に検出されます。高負荷が検出されると、シールドが自動的にオンになり、低負荷が5秒間自動的にオフになります。${gl_bai}"
 					  echo "--------------"
 					  echo "CFパラメーターを取得します："
 					  echo -e "CFバックグラウンドの右上隅に移動し、左側のAPIトークンを選択して、取得します${gl_huang}Global API Key${gl_bai}"
@@ -2343,6 +2387,9 @@ check_docker_app_ip() {
 echo "------------------------"
 echo "アクセスアドレス："
 ip_address
+
+
+
 if [ -n "$ipv4_address" ]; then
 	echo "http://$ipv4_address:${docker_port}"
 fi
@@ -2423,7 +2470,6 @@ block_container_port() {
 	local container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name_or_id")
 
 	if [ -z "$container_ip" ]; then
-		echo "エラー：コンテナを取得できません$container_name_or_idIPアドレス。コンテナ名またはIDが正しいかどうかを確認してください。"
 		return 1
 	fi
 
@@ -2482,7 +2528,6 @@ clear_container_rules() {
 	local container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name_or_id")
 
 	if [ -z "$container_ip" ]; then
-		echo "エラー：コンテナを取得できません$container_name_or_idIPアドレス。コンテナ名またはIDが正しいかどうかを確認してください。"
 		return 1
 	fi
 
@@ -3065,7 +3110,7 @@ cd ~
 send_stats "LDNMP環境をインストールします"
 root_use
 clear
-echo -e "${gl_huang}LDNMP環境はインストールされていません。LDNMP環境のインストールを開始します...${gl_bai}"
+echo -e "${gl_huang}LDNMP环境未安装，开始安装LDNMP环境...${gl_bai}"
 check_disk_space 3
 check_port
 install_dependency
@@ -3263,6 +3308,18 @@ ldnmp_Proxy_backend() {
 	nginx_http_on
 	docker exec nginx nginx -s reload
 	nginx_web_on
+}
+
+
+
+find_container_by_host_port() {
+	port="$1"
+	docker_name=$(docker ps --format '{{.ID}} {{.Names}}' | while read id name; do
+		if docker port "$id" | grep -q ":$port"; then
+			echo "$name"
+			break
+		fi
+	done)
 }
 
 
@@ -3604,7 +3661,7 @@ add_forwarding_service() {
 	read -e -p "イントラネットIPを入力してください[デフォルト127.0.0.1を入力]：" local_ip
 	local local_ip=${local_ip:-127.0.0.1}
 	read -e -p "イントラネットポートを入力してください：" local_port
-	read -e -p "请输入外网端口: " remote_port
+	read -e -p "外部ネットワークポートを入力してください：" remote_port
 
 	# ユーザー入力を構成ファイルに書き込みます
 	cat <<EOF >> /home/frp/frpc.toml
@@ -3857,8 +3914,8 @@ frps_panel() {
 
 			8)
 				send_stats "IPアクセスをブロックします"
-				echo "アンチジェネレーションドメイン名にアクセスした場合、この関数を使用して、より安全なIP+ポートアクセスをブロックできます。"
-				read -e -p "请输入需要阻止的端口: " frps_port
+				echo "アンチジェネレーションドメイン名にアクセスした場合は、この関数を使用して、より安全なIP+ポートアクセスをブロックします。"
+				read -e -p "ブロックする必要があるポートを入力してください。" frps_port
 				block_host_port "$frps_port" "$ipv4_address"
 				;;
 
@@ -4032,7 +4089,7 @@ yt_menu_pro() {
 					-a "$URL_FILE" \
 					-o "$VIDEO_DIR/%(title)s/%(title)s.%(ext)s" \
 					--no-overwrites --no-post-overwrites
-				read -e -p "批量下载完成，按任意键继续..." ;;
+				read -e -p "バッチのダウンロードが完了し、任意のキーを押して続行します..." ;;
 			7)
 				send_stats "カスタムビデオのダウンロード"
 				read -e -p "完全なYT-DLPパラメーター（YT-DLPを除く）を入力してください。" custom
@@ -4411,7 +4468,7 @@ sed -i 's/^\s*#\?\s*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_confi
 sed -i 's/^\s*#\?\s*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config;
 rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 restart_ssh
-echo -e "${gl_lv}ルートログインがセットアップされます！${gl_bai}"
+echo -e "${gl_lv}ルートログイン設定が完了しました！${gl_bai}"
 
 }
 
@@ -4814,7 +4871,7 @@ bbrv3() {
 		  echo "ビデオの紹介：https：//www.bilibili.com/video/bv14k421x7bs?t=0.1"
 		  echo "------------------------------------------------"
 		  echo "Debian/Ubuntuのみをサポートします"
-		  echo "请备份数据，将为你升级Linux内核开启BBR3"
+		  echo "データをバックアップしてください。Linuxカーネルをアップグレードできるようになります。"
 		  echo "VPSには512mのメモリがあります。メモリが不十分なため、接触の欠落を防ぐために、事前に1G仮想メモリを追加してください！"
 		  echo "------------------------------------------------"
 		  read -e -p "必ず続行しますか？ （y/n）：" choice
@@ -6447,7 +6504,7 @@ linux_tools() {
 	  echo -e "${gl_kjlan}9.   ${gl_bai}TMUXマルチチャネルバックグラウンドランニングツール${gl_kjlan}10.  ${gl_bai}Live StreamingツールをエンコードするFFMPEGビデオ"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}11.  ${gl_bai}BTOPモダン監視ツール${gl_huang}★${gl_bai}             ${gl_kjlan}12.  ${gl_bai}範囲ファイル管理ツール"
-	  echo -e "${gl_kjlan}13.  ${gl_bai}NCDUディスク職業視聴ツール${gl_kjlan}14.  ${gl_bai}fzf 全局搜索工具"
+	  echo -e "${gl_kjlan}13.  ${gl_bai}NCDUディスク職業視聴ツール${gl_kjlan}14.  ${gl_bai}FZFグローバル検索ツール"
 	  echo -e "${gl_kjlan}15.  ${gl_bai}VIMテキストエディター${gl_kjlan}16.  ${gl_bai}ナノテキストエディター${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}17.  ${gl_bai}gitバージョン制御システム"
 	  echo -e "${gl_kjlan}------------------------"
@@ -7585,7 +7642,7 @@ linux_ldnmp() {
 	  echo "Redisポート：6379"
 	  echo ""
 	  echo "ウェブサイトURL：https：//$yuming"
-	  echo "バックグラウンドログインパス： /admin"
+	  echo "バックエンドログインパス： /admin"
 	  echo "------------------------"
 	  echo "ユーザー名：admin"
 	  echo "パスワード：管理者"
@@ -7881,6 +7938,15 @@ linux_ldnmp() {
 
 	  23)
 	  ldnmp_Proxy
+	  find_container_by_host_port "$port"
+	  if [ -z "$docker_name" ]; then
+		close_port "$port"
+		echo "IP+ポートは、サービスへのアクセスをブロックされています"
+	  else
+	  	ip_address
+		block_container_port "$docker_name" "$ipv4_address"
+	  fi
+
 		;;
 
 	  24)
@@ -8247,7 +8313,7 @@ linux_ldnmp() {
 			  docker exec php mkdir -p /usr/local/bin/
 			  docker cp /usr/local/bin/install-php-extensions php:/usr/local/bin/
 			  docker exec php chmod +x /usr/local/bin/install-php-extensions
-			  docker exec php install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis imagick
+			  docker exec php install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis imagick soap
 
 
 			  docker exec php sh -c 'echo "upload_max_filesize=50M " > /usr/local/etc/php/conf.d/uploads.ini' > /dev/null 2>&1
@@ -10761,7 +10827,7 @@ linux_Settings() {
 
 	while true; do
 	  clear
-	  # send_stats "系统工具"
+	  # send_stats「システムツール」
 	  echo -e "システムツール"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}スクリプトの起動ショートカットキーを設定します${gl_kjlan}2.   ${gl_bai}ログインパスワードを変更します"
@@ -10776,7 +10842,7 @@ linux_Settings() {
 	  echo -e "${gl_kjlan}17.  ${gl_bai}ファイアウォール上級マネージャー${gl_kjlan}18.  ${gl_bai}ホスト名を変更します"
 	  echo -e "${gl_kjlan}19.  ${gl_bai}システムの更新ソースを切り替えます${gl_kjlan}20.  ${gl_bai}タイミングタスク管理"
 	  echo -e "${gl_kjlan}------------------------"
-	  echo -e "${gl_kjlan}21.  ${gl_bai}ネイティブホストの解析${gl_kjlan}22.  ${gl_bai}SSH防衛プログラム"
+	  echo -e "${gl_kjlan}21.  ${gl_bai}ネイティブホスト分析${gl_kjlan}22.  ${gl_bai}SSH防衛プログラム"
 	  echo -e "${gl_kjlan}23.  ${gl_bai}電流制限の自動シャットダウン${gl_kjlan}24.  ${gl_bai}ルート秘密キーログインモード"
 	  echo -e "${gl_kjlan}25.  ${gl_bai}TGボットシステムの監視と早期警告${gl_kjlan}26.  ${gl_bai}opensshの高リスクの脆弱性（xiuyuan）を修正"
 	  echo -e "${gl_kjlan}27.  ${gl_bai}Red Hat Linuxカーネルのアップグレード${gl_kjlan}28.  ${gl_bai}Linuxシステムにおけるカーネルパラメーターの最適化${gl_huang}★${gl_bai}"
@@ -10925,7 +10991,7 @@ EOF
 				clear
 				sed -i 's/#Port/Port/' /etc/ssh/sshd_config
 
-				# 現在のSSHポート番号をお読みください
+				# 读取当前的 SSH 端口号
 				local current_port=$(grep -E '^ *Port [0-9]+' /etc/ssh/sshd_config | awk '{print $2}')
 
 				# 現在のSSHポート番号を印刷します
@@ -11151,12 +11217,12 @@ EOF
 						  ;;
 					  4)
 					   read -e -p "ユーザー名を入力してください：" username
-					   # sudoersファイルからユーザーのsudoアクセス許可を削除します
+					   # sudoersファイルからユーザーのsudo許可を削除します
 					   sed -i "/^$username\sALL=(ALL:ALL)\sALL/d" /etc/sudoers
 
 						  ;;
 					  5)
-					   read -e -p "削除するにはユーザー名を入力してください：" username
+					   read -e -p "请输入要删除的用户名: " username
 					   # ユーザーとそのホームディレクトリを削除します
 					   userdel -r "$username"
 						  ;;
@@ -11900,7 +11966,7 @@ EOF
 
 			  echo "プライバシーとセキュリティ"
 			  echo "スクリプトは、ユーザー機能に関するデータを収集し、スクリプトエクスペリエンスを最適化し、より楽しく便利な機能を作成します。"
-			  echo "スクリプトバージョン番号、使用時間、システムバージョン、CPUアーキテクチャ、マシンの国、および使用される関数の名前を収集します。"
+			  echo "スクリプトバージョン番号、使用時間、システムバージョン、CPUアーキテクチャ、マシンの国、使用される機能の名前を収集します。"
 			  echo "------------------------------------------------"
 			  echo -e "現在のステータス：$status_message"
 			  echo "--------------------"
@@ -11999,7 +12065,7 @@ linux_file() {
 		ls --color=auto -x
 		echo "------------------------"
 		echo "1.ディレクトリ2を入力します。ディレクトリを作成3。ディレクトリアクセス許可を変更します。4。ディレクトリの名前を変更します"
-		echo "5.ディレクトリを削除6。前のメニューディレクトリに戻ります"
+		echo "5.  删除目录           6.  返回上一级选单目录"
 		echo "------------------------"
 		echo "11。ファイルを作成する12。ファイル13を編集します。ファイル許可を変更14。ファイルの名前を変更します"
 		echo "15.ファイルを削除します"
@@ -12665,6 +12731,14 @@ else
 		fd|rp|反代)
 			shift
 			ldnmp_Proxy "$@"
+	  		find_container_by_host_port "$port"
+	  		if [ -z "$docker_name" ]; then
+	  		  close_port "$port"
+			  echo "IP+ポートは、サービスへのアクセスをブロックされています"
+	  		else
+			  ip_address
+	  		  block_container_port "$docker_name" "$ipv4_address"
+	  		fi
 			;;
 
 		loadbalance|负载均衡)

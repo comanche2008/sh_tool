@@ -1,5 +1,5 @@
 #!/bin/bash
-sh_v="4.0.2"
+sh_v="4.0.3"
 
 
 gl_hui='\e[37m'
@@ -57,7 +57,7 @@ CheckFirstRun_true() {
 
 
 
-# 기능 매장 지점 정보를 수집하는 기능, 현재 스크립트 버전 번호, 사용 시간, 시스템 버전, CPU 아키텍처, 컴퓨터 국가 및 사용자가 사용하는 기능 이름을 기록합니다. 그들은 절대적으로 민감한 정보를 포함하지 않습니다. 제발 나를 믿으세요!
+# 기능 매장 지점 정보를 수집하는 기능, 현재 스크립트 버전 번호, 사용 시간, 시스템 버전, CPU 아키텍처, 기계 국가 및 사용자가 사용하는 기능 이름을 기록합니다. 그들은 절대적으로 민감한 정보를 포함하지 않습니다. 제발 나를 믿으세요!
 # 이 기능을 설계 해야하는 이유는 무엇입니까? 목적은 사용자가 사용하는 기능을 더 잘 이해하고 기능을 더욱 최적화하여 사용자 요구를 충족시키는 더 많은 기능을 시작하는 것입니다.
 # 전체 텍스트의 경우 Send_Stats 기능 호출 위치, 투명 및 오픈 소스를 검색 할 수 있으며 우려 사항이 있으면 사용을 거부 할 수 있습니다.
 
@@ -140,7 +140,28 @@ CheckFirstRun_false
 
 ip_address() {
 
-ipv4_address=$(curl -s https://ipinfo.io/ip && echo)
+get_public_ip() {
+	curl -s https://ipinfo.io/ip && echo
+}
+
+get_local_ip() {
+	ip route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[^ ]+' || \
+	hostname -I 2>/dev/null | awk '{print $1}' || \
+	ifconfig 2>/dev/null | grep -E 'inet [0-9]' | grep -v '127.0.0.1' | awk '{print $2}' | head -n1
+}
+
+public_ip=$(get_public_ip)
+isp_info=$(curl -s --max-time 3 http://ipinfo.io/org)
+
+
+if echo "$isp_info" | grep -Eiq 'china|mobile|unicom|telecom'; then
+  ipv4_address=$(get_local_ip)
+else
+  ipv4_address="$public_ip"
+fi
+
+
+# ipv4_address=$(curl -s https://ipinfo.io/ip && echo)
 ipv6_address=$(curl -s --max-time 1 https://v6.ipinfo.io/ip && echo)
 
 }
@@ -495,6 +516,8 @@ while true; do
 	echo "11. 지정된 컨테이너를 입력하십시오. 12. 컨테이너 로그보기"
 	echo "13. 컨테이너 네트워크보기 14. 컨테이너 점유보기"
 	echo "------------------------"
+	echo "15. 컨테이너 포트 액세스 켜기 16. 컨테이너 포트 액세스를 끄십시오."
+	echo "------------------------"
 	echo "0. 이전 메뉴로 돌아갑니다"
 	echo "------------------------"
 	read -e -p "선택을 입력하십시오 :" sub_choice
@@ -585,6 +608,27 @@ while true; do
 			docker stats --no-stream
 			break_end
 			;;
+
+		15)
+			send_stats "컨테이너 포트 액세스를 허용합니다"
+			read -e -p "컨테이너 이름을 입력하십시오 :" docker_name
+			ip_address
+			clear_container_rules "$docker_name" "$ipv4_address"
+			local docker_port=$(docker port $docker_name | awk -F'[:]' '/->/ {print $NF}' | uniq)
+			check_docker_app_ip
+			break_end
+			;;
+
+		16)
+			send_stats "컨테이너 포트 액세스 차단"
+			read -e -p "컨테이너 이름을 입력하십시오 :" docker_name
+			ip_address
+			block_container_port "$docker_name" "$ipv4_address"
+			local docker_port=$(docker port $docker_name | awk -F'[:]' '/->/ {print $NF}' | uniq)
+			check_docker_app_ip
+			break_end
+			;;
+
 		*)
 			break  # 跳出循环，退出菜单
 			;;
@@ -925,7 +969,7 @@ block_ip() {
 	install iptables
 
 	for ip in "${ips[@]}"; do
-		# 删除已存在的允许规则
+		# 기존 허용 규칙을 삭제합니다
 		iptables -D INPUT -s $ip -j ACCEPT 2>/dev/null
 
 		# 차단 규칙을 추가하십시오
@@ -1512,7 +1556,7 @@ fi
 
 add_yuming() {
 	  ip_address
-	  echo -e "먼저 도메인 이름을 로컬 IP로 해결합니다.${gl_huang}$ipv4_address  $ipv6_address${gl_bai}"
+	  echo -e "먼저 도메인 이름을 기본 IP로 해결합니다.${gl_huang}$ipv4_address  $ipv6_address${gl_bai}"
 	  read -e -p "IP 또는 해결 된 도메인 이름을 입력하십시오." yuming
 }
 
@@ -1618,7 +1662,7 @@ cf_purge_cache() {
 	# Zone_ids를 배열로 변환합니다
 	ZONE_IDS=($ZONE_IDS)
   else
-	# 캐시 청소 여부를 사용자에게 프롬프트하십시오
+	# 캐시 청소 여부를 사용자에게 프롬프트합니다
 	read -e -p "CloudFlare의 캐시를 청소해야합니까? (Y/N) :" answer
 	if [[ "$answer" == "y" ]]; then
 	  echo "CF 정보가 저장됩니다$CONFIG_FILE, 나중에 CF 정보를 수정할 수 있습니다"
@@ -2073,7 +2117,7 @@ web_security() {
 
 				  22)
 					  send_stats "5 초 방패의 높은 하중"
-					  echo -e "${gl_huang}웹 사이트는 5 분마다 자동으로 감지됩니다. 높은 하중의 감지에 도달하면 방패가 자동으로 켜지고 낮은 부하가 자동으로 5 초 동안 꺼집니다.${gl_bai}"
+					  echo -e "${gl_huang}웹 사이트는 5 분마다 자동으로 감지됩니다. 높은 부하가 감지되면 방패가 자동으로 켜지고 5 초 동안 낮은 부하가 자동으로 꺼집니다.${gl_bai}"
 					  echo "--------------"
 					  echo "CF 매개 변수 가져 오기 :"
 					  echo -e "CF 배경의 오른쪽 상단 모서리로 이동하여 왼쪽의 API 토큰을 선택하고 얻습니다.${gl_huang}Global API Key${gl_bai}"
@@ -2343,6 +2387,9 @@ check_docker_app_ip() {
 echo "------------------------"
 echo "액세스 주소 :"
 ip_address
+
+
+
 if [ -n "$ipv4_address" ]; then
 	echo "http://$ipv4_address:${docker_port}"
 fi
@@ -2423,7 +2470,6 @@ block_container_port() {
 	local container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name_or_id")
 
 	if [ -z "$container_ip" ]; then
-		echo "오류 : 컨테이너를 얻을 수 없습니다$container_name_or_idIP 주소. 컨테이너 이름 또는 ID가 올바른지 확인하십시오."
 		return 1
 	fi
 
@@ -2482,7 +2528,6 @@ clear_container_rules() {
 	local container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name_or_id")
 
 	if [ -z "$container_ip" ]; then
-		echo "오류 : 컨테이너를 얻을 수 없습니다$container_name_or_idIP 주소. 컨테이너 이름 또는 ID가 올바른지 확인하십시오."
 		return 1
 	fi
 
@@ -3267,6 +3312,18 @@ ldnmp_Proxy_backend() {
 
 
 
+find_container_by_host_port() {
+	port="$1"
+	docker_name=$(docker ps --format '{{.ID}} {{.Names}}' | while read id name; do
+		if docker port "$id" | grep -q ":$port"; then
+			echo "$name"
+			break
+		fi
+	done)
+}
+
+
+
 
 ldnmp_web_status() {
 	root_use
@@ -3857,7 +3914,7 @@ frps_panel() {
 
 			8)
 				send_stats "IP 액세스를 차단하십시오"
-				echo "반세기 도메인 이름에 액세스 한 경우이 기능을 사용하여 IP+ 포트 액세스를 차단할 수 있습니다."
+				echo "반세기 도메인 이름에 액세스 한 경우이 기능을 사용하여 IP+ 포트 액세스를 차단하십시오."
 				read -e -p "차단 해야하는 포트를 입력하십시오." frps_port
 				block_host_port "$frps_port" "$ipv4_address"
 				;;
@@ -4300,7 +4357,7 @@ correct_ssh_config() {
 
 	local sshd_config="/etc/ssh/sshd_config"
 
-	# PasswordAuthentication이 발견되면 예로 설정하십시오
+	# 如果找到 PasswordAuthentication 设置为 yes
 	if grep -Eq "^PasswordAuthentication\s+yes" "$sshd_config"; then
 		sed -i 's/^\s*#\?\s*PermitRootLogin.*/PermitRootLogin yes/g' "$sshd_config"
 		sed -i 's/^\s*#\?\s*PasswordAuthentication.*/PasswordAuthentication yes/g' "$sshd_config"
@@ -4411,7 +4468,7 @@ sed -i 's/^\s*#\?\s*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_confi
 sed -i 's/^\s*#\?\s*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config;
 rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 restart_ssh
-echo -e "${gl_lv}루트 로그인이 설정되었습니다!${gl_bai}"
+echo -e "${gl_lv}루트 로그인 설정이 완료되었습니다!${gl_bai}"
 
 }
 
@@ -4884,7 +4941,7 @@ elrepo_install() {
 		linux_Settings
 	fi
 	# 감지 된 운영 체제 정보를 인쇄합니다
-	echo "운영 체제 감지 :$os_name $os_version"
+	echo "감지 된 운영 체제 :$os_name $os_version"
 	# 시스템 버전에 따라 해당 Elrepo 창고 구성을 설치하십시오.
 	if [[ "$os_version" == 8 ]]; then
 		echo "Elrepo 저장소 구성 (버전 8)을 설치하십시오 ..."
@@ -7585,7 +7642,7 @@ linux_ldnmp() {
 	  echo "Redis Port : 6379"
 	  echo ""
 	  echo "웹 사이트 URL : https : //$yuming"
-	  echo "백그라운드 로그인 경로 : /admin"
+	  echo "백엔드 로그인 경로 : /admin"
 	  echo "------------------------"
 	  echo "사용자 이름 : 관리자"
 	  echo "비밀번호 : 관리자"
@@ -7881,6 +7938,15 @@ linux_ldnmp() {
 
 	  23)
 	  ldnmp_Proxy
+	  find_container_by_host_port "$port"
+	  if [ -z "$docker_name" ]; then
+		close_port "$port"
+		echo "IP+ 포트는 서비스에 액세스하는 것이 차단되었습니다"
+	  else
+	  	ip_address
+		block_container_port "$docker_name" "$ipv4_address"
+	  fi
+
 		;;
 
 	  24)
@@ -8247,7 +8313,7 @@ linux_ldnmp() {
 			  docker exec php mkdir -p /usr/local/bin/
 			  docker cp /usr/local/bin/install-php-extensions php:/usr/local/bin/
 			  docker exec php chmod +x /usr/local/bin/install-php-extensions
-			  docker exec php install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis imagick
+			  docker exec php install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis imagick soap
 
 
 			  docker exec php sh -c 'echo "upload_max_filesize=50M " > /usr/local/etc/php/conf.d/uploads.ini' > /dev/null 2>&1
@@ -10776,7 +10842,7 @@ linux_Settings() {
 	  echo -e "${gl_kjlan}17.  ${gl_bai}방화벽 고급 관리자${gl_kjlan}18.  ${gl_bai}호스트 이름을 수정하십시오"
 	  echo -e "${gl_kjlan}19.  ${gl_bai}스위치 시스템 업데이트 소스${gl_kjlan}20.  ${gl_bai}타이밍 작업 관리"
 	  echo -e "${gl_kjlan}------------------------"
-	  echo -e "${gl_kjlan}21.  ${gl_bai}기본 호스트 구문 분석${gl_kjlan}22.  ${gl_bai}SSH 방어 프로그램"
+	  echo -e "${gl_kjlan}21.  ${gl_bai}기본 호스트 분석${gl_kjlan}22.  ${gl_bai}SSH 방어 프로그램"
 	  echo -e "${gl_kjlan}23.  ${gl_bai}현재 한도의 자동 종료${gl_kjlan}24.  ${gl_bai}루트 비공개 키 로그인 모드"
 	  echo -e "${gl_kjlan}25.  ${gl_bai}TG-BOT 시스템 모니터링 및 조기 경고${gl_kjlan}26.  ${gl_bai}OpenSsh 고위험 취약점 수정 (Xiuyuan)"
 	  echo -e "${gl_kjlan}27.  ${gl_bai}Red Hat Linux 커널 업그레이드${gl_kjlan}28.  ${gl_bai}Linux 시스템에서 커널 매개 변수의 최적화${gl_huang}★${gl_bai}"
@@ -10806,7 +10872,7 @@ linux_Settings() {
 				  fi
 				  find /usr/local/bin/ -type l -exec bash -c 'test "$(readlink -f {})" = "/usr/local/bin/k" && rm -f {}' \;
 				  ln -s /usr/local/bin/k /usr/local/bin/$kuaijiejian
-				  echo "바로 가기 키가 설정되어 있습니다"
+				  echo "바로 가기 키가 설정되었습니다"
 				  send_stats "스크립트 바로 가기 키가 설정되었습니다"
 				  break_end
 				  linux_Settings
@@ -11806,7 +11872,7 @@ EOF
 			  echo -e "7. 시간대를 설정하십시오${gl_huang}상하이${gl_bai}"
 			  echo -e "8. DNS 주소를 자동으로 최적화합니다${gl_huang}해외 : 1.1.1.1 8.8.8.8 국내 : 223.5.5.5${gl_bai}"
 			  echo -e "9. 기본 도구를 설치하십시오${gl_huang}docker wget sudo tar unzip socat btop nano vim${gl_bai}"
-			  echo -e "10. Linux系统内核参数优化切换到${gl_huang}균형 최적화 모드${gl_bai}"
+			  echo -e "10. Linux 시스템에서 커널 매개 변수 최적화로 전환하십시오${gl_huang}균형 최적화 모드${gl_bai}"
 			  echo "------------------------------------------------"
 			  read -e -p "한 번의 클릭 유지 보수가 있습니까? (Y/N) :" choice
 
@@ -12665,6 +12731,14 @@ else
 		fd|rp|反代)
 			shift
 			ldnmp_Proxy "$@"
+	  		find_container_by_host_port "$port"
+	  		if [ -z "$docker_name" ]; then
+	  		  close_port "$port"
+			  echo "IP+ 포트는 서비스에 액세스하는 것이 차단되었습니다"
+	  		else
+			  ip_address
+	  		  block_container_port "$docker_name" "$ipv4_address"
+	  		fi
 			;;
 
 		loadbalance|负载均衡)

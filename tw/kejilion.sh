@@ -514,7 +514,7 @@ while true; do
 	echo "5. 重啟指定容器 9. 重新啟動所有容器"
 	echo "------------------------"
 	echo "11. 進入指定容器 12. 查看容器日誌"
-	echo "13. 查看容器網路 14. 查看容器佔用"
+	echo "13. 查看容器网络           14. 查看容器占用"
 	echo "------------------------"
 	echo "15. 開啟容器連接埠存取 16. 關閉容器連接埠訪問"
 	echo "------------------------"
@@ -1044,7 +1044,7 @@ manage_country_rules() {
 				exit 1
 			fi
 
-			# 將 IP 新增至 ipset
+			# 將 IP 新增到 ipset
 			while IFS= read -r ip; do
 				ipset add "$ipset_name" "$ip"
 			done < "${country_code,,}.zone"
@@ -1074,7 +1074,7 @@ manage_country_rules() {
 			iptables -D OUTPUT -m set --match-set "$ipset_name" dst -j DROP 2>/dev/null
 			ipset flush "$ipset_name"
 
-			# 將 IP 新增至 ipset
+			# 將 IP 新增到 ipset
 			while IFS= read -r ip; do
 				ipset add "$ipset_name" "$ip"
 			done < "${country_code,,}.zone"
@@ -1529,7 +1529,7 @@ certs_status() {
 		send_stats "網域證書申請成功"
 	else
 		send_stats "網域證書申請失敗"
-		echo -e "${gl_hong}注意:${gl_bai}證書申請失敗，請檢查以下可能原因並重試："
+		echo -e "${gl_hong}注意:${gl_bai}证书申请失败，请检查以下可能原因并重试："
 		echo -e "1. 網域拼字錯誤 ➠ 請檢查網域名稱輸入是否正確"
 		echo -e "2. DNS解析問題 ➠ 確認網域名稱已正確解析至本伺服器IP"
 		echo -e "3. 網路設定問題 ➠ 如使用Cloudflare Warp等虛擬網路請暫時關閉"
@@ -3415,7 +3415,7 @@ ldnmp_web_status() {
 				send_stats "更換站點域名"
 				echo -e "${gl_hong}強烈建議:${gl_bai}先備份好全站資料再更換站點網域！"
 				read -e -p "請輸入舊網域名稱:" oddyuming
-				read -e -p "請輸入新網域名稱:" yuming
+				read -e -p "請輸入新網域:" yuming
 				install_certbot
 				install_ssltls
 				certs_status
@@ -3462,7 +3462,7 @@ ldnmp_web_status() {
 				send_stats "建立關聯站點"
 				echo -e "為現有的站點再關聯一個新網域用於訪問"
 				read -e -p "請輸入現有的網域名稱:" oddyuming
-				read -e -p "請輸入新網域名稱:" yuming
+				read -e -p "請輸入新網域:" yuming
 				install_certbot
 				install_ssltls
 				certs_status
@@ -3680,7 +3680,7 @@ EOF
 
 add_forwarding_service() {
 	send_stats "新增frp內網服務"
-	# 提示使用者輸入服務名稱和轉發訊息
+	# 提示用户输入服务名称和转发信息
 	read -e -p "請輸入服務名稱:" service_name
 	read -e -p "請輸入轉送類型 (tcp/udp) [回​​車預設tcp]:" service_type
 	local service_type=${service_type:-tcp}
@@ -4155,7 +4155,7 @@ yt_menu_pro() {
 					--write-info-json \
 					-o "$VIDEO_DIR/%(title)s/%(title)s.%(ext)s" \
 					--no-overwrites --no-post-overwrites "$url"
-				read -e -p "音訊下載完成，按任意鍵繼續..." ;;
+				read -e -p "音频下载完成，按任意键继续..." ;;
 
 			9)
 				send_stats "刪除影片"
@@ -4459,7 +4459,7 @@ add_sshkey() {
 	chmod 600 ~/.ssh/authorized_keys
 
 	ip_address
-	echo -e "私鑰資訊已生成，務必複製保存，可保存成${gl_huang}${ipv4_address}_ssh.key${gl_bai}文件，用於以後的SSH登錄"
+	echo -e "私钥信息已生成，务必复制保存，可保存成 ${gl_huang}${ipv4_address}_ssh.key${gl_bai}文件，用於以後的SSH登錄"
 
 	echo "--------------------------------"
 	cat ~/.ssh/sshkey
@@ -4661,7 +4661,7 @@ dd_xitong() {
 
 
 			  21)
-				send_stats "重裝rockylinux10"
+				send_stats "重装rockylinux10"
 				dd_xitong_3
 				bash reinstall.sh rocky
 				reboot
@@ -5017,7 +5017,7 @@ elrepo_install() {
 
 elrepo() {
 		  root_use
-		  send_stats "紅帽內核管理"
+		  send_stats "红帽内核管理"
 		  if uname -r | grep -q 'elrepo'; then
 			while true; do
 				  clear
@@ -5270,7 +5270,7 @@ optimize_balanced() {
 	echo -e "${gl_lv}其他優化...${gl_bai}"
 	# 還原透明大頁面
 	echo always > /sys/kernel/mm/transparent_hugepage/enabled
-	# 還原 NUMA balancing
+	# 还原 NUMA balancing
 	sysctl -w kernel.numa_balancing=1 2>/dev/null
 
 
@@ -5631,7 +5631,7 @@ linux_trash() {
 		sed -i '/alias rm/d' "$bashrc_profile"
 		echo "alias rm='rm -i'" >> "$bashrc_profile"
 		source "$bashrc_profile"
-		echo "回收站已關閉，檔案將直接刪除。"
+		echo "回收站已关闭，文件将直接删除。"
 		sleep 2
 		;;
 	  3)
@@ -7219,7 +7219,7 @@ linux_test() {
 			  send_stats "nxtrace指定IP回程測試腳本"
 			  echo "可參考的IP列表"
 			  echo "------------------------"
-			  echo "北京電信: 219.141.136.12"
+			  echo "北京电信: 219.141.136.12"
 			  echo "北京聯通: 202.106.50.1"
 			  echo "北京移動: 221.179.155.161"
 			  echo "上海電信: 202.96.209.133"
@@ -8522,7 +8522,7 @@ while true; do
 	  echo -e "${gl_kjlan}63.  ${color63}OpenWebUI自架AI平台${gl_huang}★${gl_bai}             ${gl_kjlan}64.  ${color64}it-tools工具箱"
 	  echo -e "${gl_kjlan}65.  ${color65}n8n自動化工作流程平台${gl_huang}★${gl_bai}               ${gl_kjlan}66.  ${color66}yt-dlp影片下載工具"
 	  echo -e "${gl_kjlan}67.  ${color67}ddns-go動態DNS管理工具${gl_huang}★${gl_bai}            ${gl_kjlan}68.  ${color68}AllinSSL憑證管理平台"
-	  echo -e "${gl_kjlan}69.  ${color69}SFTPGo檔案傳輸工具${gl_kjlan}70.  ${color70}AstrBot聊天機器人框架"
+	  echo -e "${gl_kjlan}69.  ${color69}SFTPGo檔案傳輸工具${gl_kjlan}70.  ${color70}AstrBot聊天机器人框架"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}71.  ${color71}Navidrome私有音樂伺服器${gl_kjlan}72.  ${color72}bitwarden密碼管理器${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}73.  ${color73}LibreTV私有影視${gl_kjlan}74.  ${color74}MoonTV私有影視"
@@ -8831,7 +8831,7 @@ while true; do
 			fi
 
 			echo "------------------------"
-			echo "1. 安裝 2. 更新 3. 卸載"
+			echo "1. 安装           2. 更新           3. 卸载"
 			echo "------------------------"
 			echo "0. 返回上一級選單"
 			echo "------------------------"
@@ -11525,7 +11525,7 @@ EOF
 						send_stats "SSH連接埠已修改"
 						new_ssh_port
 					elif [[ $new_port -eq 0 ]]; then
-						send_stats "退出SSH埠修改"
+						send_stats "退出SSH連接埠修改"
 						break
 					else
 						echo "連接埠號碼無效，請輸入1到65535之間的數字。"
@@ -11938,7 +11938,7 @@ EOF
 		  send_stats "換系統更新來源"
 		  clear
 		  echo "選擇更新來源區域"
-		  echo "接入LinuxMirrors切換系統更新來源"
+		  echo "接入LinuxMirrors切换系统更新源"
 		  echo "------------------------"
 		  echo "1. 中國大陸【預設】 2. 中國大陸【教育網】 3. 海外地區"
 		  echo "------------------------"
@@ -12089,7 +12089,7 @@ EOF
 				echo "------------------------"
 				echo "1. 安裝防禦程序"
 				echo "------------------------"
-				echo "2. 查看SSH攔截記錄"
+				echo "2. 查看SSH拦截记录"
 				echo "3. 日誌即時監控"
 				echo "------------------------"
 				echo "9. 卸載防禦程序"
@@ -12922,7 +12922,7 @@ while true; do
 
 		  51)
 			  send_stats "自訂執行命令"
-			  read -e -p "請輸入批次執行的命令:" mingling
+			  read -e -p "请输入批量执行的命令: " mingling
 			  run_commands_on_servers "${mingling}"
 			  ;;
 
@@ -12981,7 +12981,7 @@ echo -e "${gl_kjlan}B站:${gl_bai}https://b23.tv/2mqnQyh              ${gl_kjlan
 echo -e "${gl_kjlan}官網:${gl_bai}https://kejilion.pro/              ${gl_kjlan}導航:${gl_bai}https://dh.kejilion.pro/${gl_bai}"
 echo -e "${gl_kjlan}部落格:${gl_bai}https://blog.kejilion.pro/         ${gl_kjlan}軟體中心:${gl_bai}https://app.kejilion.pro/${gl_bai}"
 echo "------------------------"
-echo -e "${gl_kjlan}腳本官網:${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub地址:${gl_bai}https://github.com/kejilion/sh${gl_bai}"
+echo -e "${gl_kjlan}脚本官网: ${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub地址:${gl_bai}https://github.com/kejilion/sh${gl_bai}"
 echo "------------------------"
 echo ""
 }

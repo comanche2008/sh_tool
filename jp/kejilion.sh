@@ -241,7 +241,7 @@ remove() {
 	fi
 
 	for package in "$@"; do
-		echo -e "${gl_huang}アンインストール中$package...${gl_bai}"
+		echo -e "${gl_huang}アンインストールする$package...${gl_bai}"
 		if command -v dnf &>/dev/null; then
 			dnf remove -y "$package"
 		elif command -v yum &>/dev/null; then
@@ -888,12 +888,12 @@ open_port() {
 
 		if ! iptables -C INPUT -p udp --dport $port -j ACCEPT 2>/dev/null; then
 			iptables -I INPUT 1 -p udp --dport $port -j ACCEPT
-			echo "ポートがオープンしました$port"
+			echo "ポートがオープンされました$port"
 		fi
 	done
 
 	save_iptables_rules
-	send_stats "ポートがオープンしました"
+	send_stats "ポートがオープンされました"
 }
 
 
@@ -1167,7 +1167,7 @@ iptables_panel() {
 				  send_stats "すべてのポートを開く"
 				  ;;
 			  4)
-				  # 关闭所有端口
+				  # すべてのポートを閉じます
 				  current_port=$(grep -E '^ *Port [0-9]+' /etc/ssh/sshd_config | awk '{print $2}')
 				  iptables -F
 				  iptables -X
@@ -1184,7 +1184,7 @@ iptables_panel() {
 				  ;;
 
 			  5)
-				  # IP 白名单
+				  # IPホワイトリスト
 				  read -e -p "許可された IP または IP セグメントを入力してください:" o_ip
 				  allow_ip $o_ip
 				  ;;
@@ -1667,7 +1667,7 @@ cf_purge_cache() {
 	# キャッシュをクリアするかどうかをユーザーに確認する
 	read -e -p "Cloudflareのキャッシュをクリアする必要がありますか? (y/n):" answer
 	if [[ "$answer" == "y" ]]; then
-	  echo "CF 情報は次の場所に保存されます。$CONFIG_FILECF 情報は後で変更できます。"
+	  echo "CF情報は以下に保存されます。$CONFIG_FILECF 情報は後で変更できます。"
 	  read -e -p "API_TOKEN を入力してください:" API_TOKEN
 	  read -e -p "CF ユーザー名を入力してください:" EMAIL
 	  read -e -p "zone_id を入力してください (複数の場合はスペースで区切ります):" -a ZONE_IDS
@@ -2123,7 +2123,7 @@ web_security() {
 					  send_stats "高負荷により5秒シールドが可能"
 					  echo -e "${gl_huang}Web サイトは 5 分ごとに自動的に検出します。高負荷を検出すると自動的にシールドが開き、低負荷を検出すると5秒間自動的にシールドが閉じます。${gl_bai}"
 					  echo "--------------"
-					  echo "CFパラメータを取得します。"
+					  echo "CF パラメータを取得します。"
 					  echo -e "cf バックエンドの右上隅にある私のプロフィールに移動し、左側で API トークンを選択して、${gl_huang}Global API Key${gl_bai}"
 					  echo -e "cf バックエンド ドメイン名の概要ページの右下に移動して取得します。${gl_huang}エリアID${gl_bai}"
 					  echo "https://dash.cloudflare.com/login"
@@ -2241,7 +2241,7 @@ web_optimization() {
 			  send_stats "LDNMP環境の最適化"
 			  echo -e "LDNMP環境の最適化${gl_lv}${mode_info}${gzip_status}${br_status}${zstd_status}${gl_bai}"
 			  echo "------------------------"
-			  echo "1.スタンダードモード 2.ハイパフォーマンスモード（2H4G以上推奨）"
+			  echo "1.スタンダードモード 2.ハイパフォーマンスモード(2H4G以上推奨)"
 			  echo "------------------------"
 			  echo "3. gzip 圧縮をオンにする 4. gzip 圧縮をオフにする"
 			  echo "5. br 圧縮をオンにする 6. br 圧縮をオフにする"
@@ -2497,7 +2497,7 @@ block_container_port() {
 		iptables -I DOCKER-USER -p tcp -s "$allowed_ip" -d "$container_ip" -j ACCEPT
 	fi
 
-	# ローカルネットワーク127.0.0.0/8を確認して許可します。
+	# ローカルネットワーク127.0.0.0/8をチェックして許可します。
 	if ! iptables -C DOCKER-USER -p tcp -s 127.0.0.0/8 -d "$container_ip" -j ACCEPT &>/dev/null; then
 		iptables -I DOCKER-USER -p tcp -s 127.0.0.0/8 -d "$container_ip" -j ACCEPT
 	fi
@@ -2514,7 +2514,7 @@ block_container_port() {
 		iptables -I DOCKER-USER -p udp -s "$allowed_ip" -d "$container_ip" -j ACCEPT
 	fi
 
-	# ローカルネットワーク127.0.0.0/8を確認して許可します。
+	# ローカルネットワーク127.0.0.0/8をチェックして許可します。
 	if ! iptables -C DOCKER-USER -p udp -s 127.0.0.0/8 -d "$container_ip" -j ACCEPT &>/dev/null; then
 		iptables -I DOCKER-USER -p udp -s 127.0.0.0/8 -d "$container_ip" -j ACCEPT
 	fi
@@ -2550,7 +2550,7 @@ clear_container_rules() {
 		iptables -D DOCKER-USER -p tcp -d "$container_ip" -j DROP
 	fi
 
-	# 指定したIPを許可するルールをクリアします
+	# 指定した IP を許可するルールをクリアします
 	if iptables -C DOCKER-USER -p tcp -s "$allowed_ip" -d "$container_ip" -j ACCEPT &>/dev/null; then
 		iptables -D DOCKER-USER -p tcp -s "$allowed_ip" -d "$container_ip" -j ACCEPT
 	fi
@@ -2569,7 +2569,7 @@ clear_container_rules() {
 		iptables -D DOCKER-USER -p udp -d "$container_ip" -j DROP
 	fi
 
-	# 指定したIPを許可するルールをクリアします
+	# 指定した IP を許可するルールをクリアします
 	if iptables -C DOCKER-USER -p udp -s "$allowed_ip" -d "$container_ip" -j ACCEPT &>/dev/null; then
 		iptables -D DOCKER-USER -p udp -s "$allowed_ip" -d "$container_ip" -j ACCEPT
 	fi
@@ -3494,7 +3494,7 @@ ldnmp_web_status() {
 
 			8)
 				send_stats "サイト構成を編集する"
-				read -e -p "サイト構成を編集するには、編集するドメイン名を入力してください:" yuming
+				read -e -p "サイト設定を編集するには、編集するドメイン名を入力してください:" yuming
 				install nano
 				nano /home/web/conf.d/$yuming.conf
 				docker exec nginx nginx -s reload
@@ -3726,7 +3726,7 @@ delete_forwarding_service() {
 list_forwarding_services() {
 	local config_file="$1"
 
-	# ヘッダーを印刷します
+	# ヘッダーの印刷
 	printf "%-20s %-25s %-30s %-10s\n" "服务名称" "内网地址" "外网地址" "协议"
 
 	awk '
@@ -4355,7 +4355,7 @@ while true; do
 	echo "2.国内DNSの最適化:"
 	echo " v4: 223.5.5.5 183.60.83.19"
 	echo " v6: 2400:3200::1 2400:da00::6666"
-	echo "3. DNS 構成を手動で編集する"
+	echo "3. DNS 設定を手動で編集する"
 	echo "------------------------"
 	echo "0. 前のメニューに戻る"
 	echo "------------------------"
@@ -4471,7 +4471,7 @@ add_sshkey() {
 		   -e 's/^\s*#\?\s*ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
 	rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 	restart_ssh
-	echo -e "${gl_lv}ROOT 秘密キー ログインがオンになり、ROOT パスワード ログインがオフになり、再接続が有効になります。${gl_bai}"
+	echo -e "${gl_lv}ROOT秘密キーログインがオンになり、ROOTパスワードログインがオフになり、再接続が有効になります${gl_bai}"
 
 }
 
@@ -4514,7 +4514,7 @@ sed -i 's/^\s*#\?\s*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_confi
 sed -i 's/^\s*#\?\s*PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config;
 rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 restart_ssh
-echo -e "${gl_lv}ROOTログインの設定は完了です！${gl_bai}"
+echo -e "${gl_lv}ROOTログインの設定が完了しました！${gl_bai}"
 
 }
 
@@ -4733,7 +4733,7 @@ dd_xitong() {
 				;;
 
 			  30)
-				send_stats "centos9を再インストールする"
+				send_stats "CentOS9を再インストールする"
 				dd_xitong_3
 				bash reinstall.sh centos 9
 				reboot
@@ -5399,7 +5399,7 @@ Kernel_optimize() {
 			  cd ~
 			  clear
 			  optimize_web_server
-			  send_stats "ウェブサイト最適化モード"
+			  send_stats "ウェブサイト最適化モデル"
 			  ;;
 		  4)
 			  cd ~
@@ -5489,7 +5489,7 @@ while true; do
   case $choice in
 	  1)
 		  update_locale "en_US.UTF-8" "en_US.UTF-8"
-		  send_stats "英語に切り替えてください"
+		  send_stats "英語に切り替えて"
 		  ;;
 	  2)
 		  update_locale "zh_CN.UTF-8" "zh_CN.UTF-8"
@@ -5662,9 +5662,9 @@ send_stats "コマンドのお気に入り"
 bash <(curl -l -s ${gh_proxy}raw.githubusercontent.com/byJoey/cmdbox/refs/heads/main/install.sh)
 }
 
-# バックアップの作成
+# バックアップを作成する
 create_backup() {
-	send_stats "バックアップの作成"
+	send_stats "バックアップを作成する"
 	local TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 
 	# ユーザーにバックアップ ディレクトリの入力を求めるプロンプトを表示する
@@ -5706,7 +5706,7 @@ create_backup() {
 		echo "- $path"
 	done
 
-	# バックアップの作成
+	# バックアップを作成する
 	echo "バックアップの作成$BACKUP_NAME..."
 	install tar
 	tar -czvf "$BACKUP_DIR/$BACKUP_NAME" "${BACKUP_PATHS[@]}"
@@ -5994,9 +5994,9 @@ list_partitions() {
 	lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT | grep -v "sr\|loop"
 }
 
-# パーティションをマウントする
+# パーティションのマウント
 mount_partition() {
-	send_stats "パーティションをマウントする"
+	send_stats "パーティションのマウント"
 	read -e -p "マウントするパーティションの名前を入力してください (例: sda1):" PARTITION
 
 	# パーティションが存在するかどうかを確認する
@@ -6015,7 +6015,7 @@ mount_partition() {
 	MOUNT_POINT="/mnt/$PARTITION"
 	mkdir -p "$MOUNT_POINT"
 
-	# パーティションをマウントする
+	# パーティションのマウント
 	mount "/dev/$PARTITION" "$MOUNT_POINT"
 
 	if [ $? -eq 0 ]; then
@@ -6127,7 +6127,7 @@ disk_manager() {
 	send_stats "ハードディスク管理機能"
 	while true; do
 		clear
-		echo "ハードディスクのパーティション管理"
+		echo "ハードドライブのパーティション管理"
 		echo -e "${gl_huang}この機能は内部テスト中であるため、運用環境では使用しないでください。${gl_bai}"
 		echo "------------------------"
 		list_partitions
@@ -6334,7 +6334,7 @@ run_task() {
 	else
 		echo "同期に失敗しました!以下の点をご確認ください。"
 		echo "1. ネットワーク接続は正常ですか?"
-		echo "2. リモートホストにアクセスできるかどうか"
+		echo "2. リモート ホストにアクセスできますか?"
 		echo "3. 認証情報は正しいですか?"
 		echo "4. ローカル ディレクトリとリモート ディレクトリには正しいアクセス許可がありますか?"
 	fi
@@ -8532,7 +8532,7 @@ while true; do
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}81.  ${color81}JitsiMeet ビデオ会議${gl_kjlan}82.  ${color82}gpt-load 高性能 AI 透過プロキシ"
 	  echo -e "${gl_kjlan}83.  ${color83}komariサーバー監視ツール${gl_kjlan}84.  ${color84}Wallos の個人財務管理ツール"
-	  echo -e "${gl_kjlan}85.  ${color85}イミッチ・ピクチャー・ビデオ・マネージャー${gl_kjlan}86.  ${color86}ジェリーフィンメディア管理システム"
+	  echo -e "${gl_kjlan}85.  ${color85}イミッチピクチャービデオマネージャー${gl_kjlan}86.  ${color86}ジェリーフィンメディア管理システム"
 	  echo -e "${gl_kjlan}87.  ${color87}SyncTV は一緒に映画を見るための素晴らしいツールです${gl_kjlan}88.  ${color88}Owncast の自己ホスト型ライブ ストリーミング プラットフォーム"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}0.   ${gl_bai}メインメニューに戻る"
@@ -8729,7 +8729,7 @@ while true; do
 			check_docker_app
 			check_docker_image_update $docker_name
 			clear
-			echo -e "ネザモニタリング$check_docker $update_status"
+			echo -e "ネザ監視$check_docker $update_status"
 			echo "オープンソースの軽量で使いやすいサーバー監視および運用保守ツール"
 			echo "公式 Web サイト構築ドキュメント: https://nezha.wiki/guide/dashboard.html"
 			if docker ps -a --format '{{.Names}}' | grep -q "$docker_name" >/dev/null 2>&1; then
@@ -8738,7 +8738,7 @@ while true; do
 			fi
 			echo ""
 			echo "------------------------"
-			echo "1. 使用方法"
+			echo "1. 使用する"
 			echo "------------------------"
 			echo "0. 前のメニューに戻る"
 			echo "------------------------"
@@ -11157,7 +11157,7 @@ linux_work() {
 	  echo -e "バックエンドワークスペース"
 	  echo -e "システムは、バックグラウンドで永続的に実行できるワークスペースを提供し、長期的なタスクを実行するために使用できます。"
 	  echo -e "SSH を切断しても、ワークスペース内のタスクは中断されず、タスクはバックグラウンドで残ります。"
-	  echo -e "${gl_huang}ヒント：${gl_bai}ワークスペースに入ったら、Ctrl+b を使用し、次に d を単独で押してワークスペースを終了します。"
+	  echo -e "${gl_huang}ヒント：${gl_bai}ワークスペースに入ったら、Ctrl+b を使用し、d だけを押してワークスペースを終了します。"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo "現在存在するワークスペースのリスト"
 	  echo -e "${gl_kjlan}------------------------"
@@ -11167,7 +11167,7 @@ linux_work() {
 	  echo -e "${gl_kjlan}2.   ${gl_bai}作業エリア 2"
 	  echo -e "${gl_kjlan}3.   ${gl_bai}作業エリア 3"
 	  echo -e "${gl_kjlan}4.   ${gl_bai}作業エリア 4"
-	  echo -e "${gl_kjlan}5.   ${gl_bai}作業エリア5"
+	  echo -e "${gl_kjlan}5.   ${gl_bai}ワークスペースNo.5"
 	  echo -e "${gl_kjlan}6.   ${gl_bai}作業エリア6"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}作業エリア 7"
 	  echo -e "${gl_kjlan}8.   ${gl_bai}作業エリア8"
@@ -11347,7 +11347,7 @@ linux_Settings() {
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}1.   ${gl_bai}スクリプト起動のショートカットキーを設定する${gl_kjlan}2.   ${gl_bai}ログインパスワードを変更する"
 	  echo -e "${gl_kjlan}3.   ${gl_bai}ROOTパスワードログインモード${gl_kjlan}4.   ${gl_bai}指定されたバージョンの Python をインストールします"
-	  echo -e "${gl_kjlan}5.   ${gl_bai}すべてのポートを開く${gl_kjlan}6.   ${gl_bai}SSH接続ポートの変更"
+	  echo -e "${gl_kjlan}5.   ${gl_bai}すべてのポートを開く${gl_kjlan}6.   ${gl_bai}SSH接続ポートを変更する"
 	  echo -e "${gl_kjlan}7.   ${gl_bai}DNSアドレスを最適化する${gl_kjlan}8.   ${gl_bai}ワンクリックでシステムを再インストールします${gl_huang}★${gl_bai}"
 	  echo -e "${gl_kjlan}9.   ${gl_bai}ROOTアカウントを無効にして新しいアカウントを作成する${gl_kjlan}10.  ${gl_bai}スイッチ優先度 ipv4/ipv6"
 	  echo -e "${gl_kjlan}------------------------"
@@ -12151,7 +12151,7 @@ EOF
 					echo -e "${gl_lv}現在設定されている受信トラフィック制限のしきい値は次のとおりです。${gl_huang}${rx_threshold_gb}${gl_lv}G${gl_bai}"
 					echo -e "${gl_lv}現在設定されている送信トラフィック制限のしきい値は次のとおりです。${gl_huang}${tx_threshold_gb}${gl_lv}GB${gl_bai}"
 				else
-					echo -e "${gl_hui}電流制限シャットダウン機能は現在有効になっていません。${gl_bai}"
+					echo -e "${gl_hui}電流制限シャットダウン機能は現在有効になっていません${gl_bai}"
 				fi
 
 				echo
@@ -12408,7 +12408,7 @@ EOF
 			  case "$choice" in
 				[Yy])
 				  clear
-				  send_stats "ワンストップチューニングが始まります"
+				  send_stats "ワンストップチューニングスタート"
 				  echo "------------------------------------------------"
 				  linux_update
 				  echo -e "[${gl_lv}OK${gl_bai}】1/10。システムを最新のものにアップデートする"
@@ -12494,7 +12494,7 @@ EOF
 			  fi
 
 			  echo "プライバシーとセキュリティ"
-			  echo "スクリプトはユーザーによる機能の使用に関するデータを収集し、スクリプト エクスペリエンスを最適化し、より楽しくて便利な機能を作成します。"
+			  echo "スクリプトはユーザーの機能使用に関するデータを収集し、スクリプト エクスペリエンスを最適化し、より楽しくて便利な機能を作成します。"
 			  echo "スクリプトのバージョン番号、使用時間、システムバージョン、CPUアーキテクチャ、マシンの国、使用された機能の名前が収集されます。"
 			  echo "------------------------------------------------"
 			  echo -e "現在のステータス:$status_message"
@@ -12843,12 +12843,12 @@ while true; do
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
 	  echo -e "${gl_kjlan}サーバーリスト管理${gl_bai}"
 	  echo -e "${gl_kjlan}1.  ${gl_bai}サーバーの追加${gl_kjlan}2.  ${gl_bai}サーバーの削除${gl_kjlan}3.  ${gl_bai}サーバーの編集"
-	  echo -e "${gl_kjlan}4.  ${gl_bai}バックアップクラスター${gl_kjlan}5.  ${gl_bai}クラスターを復元する"
+	  echo -e "${gl_kjlan}4.  ${gl_bai}バックアップクラスター${gl_kjlan}5.  ${gl_bai}クラスタを復元する"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
 	  echo -e "${gl_kjlan}タスクをバッチで実行する${gl_bai}"
 	  echo -e "${gl_kjlan}11. ${gl_bai}テクノロジ ライオン スクリプトをインストールする${gl_kjlan}12. ${gl_bai}アップデートシステム${gl_kjlan}13. ${gl_bai}システムをクリーンアップする"
 	  echo -e "${gl_kjlan}14. ${gl_bai}ドッカーをインストールする${gl_kjlan}15. ${gl_bai}BBR3をインストールする${gl_kjlan}16. ${gl_bai}1Gの仮想メモリを設定する"
-	  echo -e "${gl_kjlan}17. ${gl_bai}タイムゾーンを上海に設定${gl_kjlan}18. ${gl_bai}すべてのポートを開く${gl_kjlan}51. ${gl_bai}カスタム命令"
+	  echo -e "${gl_kjlan}17. ${gl_bai}タイムゾーンを上海に設定${gl_kjlan}18. ${gl_bai}すべてのポートを開く${gl_kjlan}51. ${gl_bai}カスタムディレクティブ"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
 	  echo -e "${gl_kjlan}0.  ${gl_bai}メインメニューに戻る"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -12888,7 +12888,7 @@ while true; do
 
 		  5)
 			  clear
-			  send_stats "クラスターを復元する"
+			  send_stats "クラスタを復元する"
 			  echo "servers.py をアップロードし、任意のキーを押してアップロードを開始してください。"
 			  echo -e "をアップロードしてください${gl_huang}servers.py${gl_bai}ファイルに${gl_huang}/root/cluster/${gl_bai}復元完了！"
 			  break_end
@@ -13005,7 +13005,7 @@ while true; do
 	local sh_v_new=$(curl -s ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
 
 	if [ "$sh_v" = "$sh_v_new" ]; then
-		echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
+		echo -e "${gl_lv}すでに最新バージョンを使用しています。${gl_huang}v$sh_v${gl_bai}"
 		send_stats "スクリプトはすでに最新であるため、更新する必要はありません"
 	else
 		echo "新しいバージョン発見！"
@@ -13150,7 +13150,7 @@ done
 
 
 k_info() {
-send_stats "k コマンドのリファレンス例"
+send_stats "k コマンドリファレンスの使用例"
 echo "-------------------"
 echo "ビデオ紹介: https://www.bilibili.com/video/BV1ib421E7it?t=0.1"
 echo "以下は、k コマンドの参考使用例です。"
